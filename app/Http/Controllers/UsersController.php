@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Http\Request;
 use App\UserLikedPosts;
+use App\UserMessage;
 use App\ActivityLog;
 use Carbon\Carbon;
 use App\Thread;
@@ -50,7 +52,33 @@ class UsersController extends Controller
      */
     public function store(Request $request)
     {
-        //
+        $this->authorize('create', User::class);
+
+        request()->validate([
+            'username'  => 'required|string|min:3|max:15|unique:users|alpha_dash',
+            'email'	    => 'required|string|min:3|max:30|unique:users|email',
+            'password'  => 'required|string|min:6|max:30',
+            'signature' => 'max:100|nullable',
+            'avatar'	=> 'max:5120|file|image|nullable',
+        ]);
+
+        if (isset($request->avatar)) {
+			// Store the avatar as an absolute URI path
+			$path = $request->file('avatar')->store('/public/user-avatars');
+			$path = explode('public/', $path)[1];
+			$path = route('index') . '/storage/' . $path;
+		}
+
+        $user = User::create([
+            'username'  => request('username'),
+            'email'     => request('email'),
+            'role'      => request('role'),
+            'password'  => Hash::make(request('password')),
+            'signature' => request('signature'),
+            'avatar'    => $path ?? route('index') . '/storage/user-avatars/default.svg',
+        ]);
+
+        return redirect(route('user_show', [$user->id]));
     }
 
     /**
@@ -104,7 +132,23 @@ class UsersController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        if (empty($user = User::find($id))) return msg_error(__('That user does not exist'));
+
+        request()->validate([
+            'username'  => 'nullable|min:3|max:15|unique:users|alpha_dash',
+            'email'	    => 'nullable|min:3|max:30|unique:users|email',
+            'signature' => 'max:100|nullable',
+            'avatar'	=> 'max:5120|file|image|nullable',
+        ]);
+
+        $user->update([
+            'username'  => request('username') ?? $user->username,
+            'email'     => request('email') ?? $user->email,
+            'role'      => request('role') ?? $user->role,
+            'signature' => request('signature') ?? $user->signature,
+        ]);
+
+        return redirect()->back();
     }
 
     /**
@@ -136,10 +180,8 @@ class UsersController extends Controller
 		// Make it possible to go to /user/1 or /user/john but the latter is bound to the 'user_show' route
 		if (User::find($id) || User::where('username', $id)->first()) {
 			$user = User::find($id) ?? User::where('username', $id)->first();
-
-			$posts = $this->get_user_liked_posts($user->id);
-
 			$activities = ActivityLog::where('user_id', $user->id)->paginate(settings_get('posts_per_page'));
+			$posts = $this->get_user_liked_posts($user->id);
 
 			if (!count($activities)) {
 				$activities = false;
@@ -160,10 +202,8 @@ class UsersController extends Controller
 		// Make it possible to go to /user/1 or /user/john but the latter is bound to the 'user_show' route
 		if (User::find($id) || User::where('username', $id)->first()) {
 			$user = User::find($id) ?? User::where('username', $id)->first();
-
-			$posts = $this->get_user_liked_posts($user->id);
-			
 			$userPosts = Post::where('user_id', $user->id)->paginate(settings_get('posts_per_page'));
+			$posts = $this->get_user_liked_posts($user->id);
 
 			return view('user.posts', [
 				'posts_with_likes' => $posts,
@@ -179,10 +219,9 @@ class UsersController extends Controller
 	{
 		// Make it possible to go to /user/1 or /user/john but the latter is bound to the 'user_show' route
 		if (User::find($id) || User::where('username', $id)->first()) {
-			$user = User::find($id) ?? User::where('username', $id)->first();
-
-			$posts = $this->get_user_liked_posts($user->id);
+			$user  = User::find($id) ?? User::where('username', $id)->first();
 			$likes = $user->likes()->distinct('post_id')->paginate(settings_get('posts_per_page'));
+			$posts = $this->get_user_liked_posts($user->id);
 
 			return view('user.likes', [
 				'posts_with_likes' => $posts,
@@ -199,7 +238,6 @@ class UsersController extends Controller
 		// Make it possible to go to /user/1 or /user/john but the latter is bound to the 'user_show' route
 		if (User::find($id) || User::where('username', $id)->first()) {
 			$user = User::find($id) ?? User::where('username', $id)->first();
-
 			$posts = $this->get_user_liked_posts($user->id);
 			
 			return view('user.threads', [
@@ -211,4 +249,66 @@ class UsersController extends Controller
 			return view('errors.404');
 		}
 	}
+
+    public function show_messages(Request $request, $id)
+	{
+		// Make it possible to go to /user/1 or /user/john but the latter is bound to the 'user_show' route
+		if (User::find($id) || User::where('username', $id)->first()) {
+			$user = User::find($id) ?? User::where('username', $id)->first();
+			$posts = $this->get_user_liked_posts($user->id);
+            if (logged_in()) {
+                $messages = UserMessage::where('author_id', auth()->user()->id)
+                    ->where('recipient_id', $user->id)
+                    ->orWhere('author_id', $user->id)
+                    ->where('recipient_id', auth()->user()->id)
+                    ->distinct('id')
+                    ->orderByDesc('created_at')
+                    ->paginate(settings_get('posts_per_page'));
+            } else {
+                $messages = [];
+            }
+			
+			return view('user.messages', [
+				'posts_with_likes' => $posts,
+				'messages' 		   => $messages,
+				'user' 			   => $user,
+			]);
+		} else {
+			return view('errors.404');
+		}
+	}
+
+    public function suspend(Request $request, $id) {
+        if (empty(User::find($id))) return msg_error(__('That user does not exist'));
+
+        $this->authorize('suspend', User::find($id));
+
+        request()->validate([
+            'day'    => 'required|string',
+            'month'  => 'required|string',
+            'year'   => 'required|string',
+            'reason' => 'string|min:3|max:20',
+        ]);
+
+        $date = Carbon::now();
+        $date->day = request('day');
+        $date->month = request('month');
+        $date->year = request('year');
+        
+        $user = User::find($id);
+        $user->suspend($date, request('reason'));
+
+        return redirect()->back();
+    }
+
+    public function pardon(Request $request, $id) {
+        if (empty(User::find($id))) return msg_error(__('That user does not exist'));
+
+        $this->authorize('suspend', User::find($id));
+        
+        $user = User::find($id);
+        $user->pardon();
+
+        return redirect()->back();
+    }
 }

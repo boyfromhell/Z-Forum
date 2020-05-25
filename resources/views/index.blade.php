@@ -96,10 +96,8 @@
 										<i class="fas fa-sign-in-alt"></i>
 									</a>
 									<p>
-										@isset($latest_post->user->username)
-											<span>{{ __('By') }}</span>
-										@endisset
-										<a class="posted-by {{role_coloring($latest_post->user->role)}}" href="{{route('user_show', [$latest_post->user->id])}}">
+										<a class="posted-by {{role_coloring($latest_post->user->role)}}"
+                                            href="{{route('user_show', [$latest_post->user->id])}}">
 											{{ $latest_post->user->username }}
 										</a>
 									</p>

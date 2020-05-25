@@ -34,9 +34,9 @@
 
 			@foreach ($threads as $thread)	
 				{{-- Check if the thread has any admin post --}}
-				@foreach ($subcategory->posts as $post)
-					@if ($post->user->role === 'superadmin')
-						@php $admin_post = true @endphp
+				@foreach ($thread->posts->sortByDesc('created_at') as $post)
+					@if ($post->user->is_role('superadmin'))
+						@php $admin_post = $post @endphp
 						@break
 					@endif
 				@endforeach
@@ -63,6 +63,18 @@
 						<a href="{{route('thread_show', [$thread->id, $thread->slug])}}">
 							{{ $thread->title }}
 						</a>
+                        @isset($admin_post)
+                            <a class="orange-post" href="{{
+                                route('post_show', [
+                                    $thread->id,
+                                    $thread->slug,
+                                    get_item_page_number($thread->posts->sortBy('created_at'), $admin_post->id, settings_get('posts_per_page')),
+                                    $admin_post->id,
+                                ])
+                            }}">
+                                {{ __('Orange post') }}
+                            </a>
+                        @endisset
 					@endslot
 
 					@slot('views')
@@ -90,9 +102,6 @@
 									<i class="fas fa-sign-in-alt"></i>
 								</a>
 								<p>
-									@isset($post->user->username)
-										<span>{{ __('By') }}</span>
-									@endisset
 									<a class="posted-by {{role_coloring($post->user->role)}}" href="{{route('user_show', [$post->user->id])}}">
 										{{ $post->user->username }}
 									</a>
@@ -106,9 +115,11 @@
 		</div>
 	</div>
 	
-	<a class="btn btn-success-full" href="{{route('thread_create', [$subcategory->id, $subcategory->slug])}}">
-		<span>{{ __('Create new thread') }}</span>
-	</a>
+    @can('create', App\Thread::class)
+        <a class="btn btn-success-full" href="{{route('thread_create', [$subcategory->id, $subcategory->slug])}}">
+            <span>{{ __('Create new thread') }}</span>
+        </a>
+    @endcan
 
 	@auth
 		{{-- Which collection to mark as read --}}
@@ -124,3 +135,64 @@
 		</script>
 	@endauth
 @endsection
+
+@can('update', App\Subcategory::class)
+    @section('toolbarItem')
+        @component('components.toolbar-item', ['cookie' => 'subcategory'])
+            @slot('icon')
+                <i class="fas fa-tag"></i>
+            @endslot
+
+            @slot('categoryTitle')
+                {{ __('Subcategory') }}
+            @endslot
+
+            @slot('toolbarSubitem')
+                @can('update', App\Subcategory::class)
+                    @component('components.toolbar-subitem')
+                        @slot('subitemTitle')
+                            {{ __('Edit subcategory') }}
+                        @endslot
+
+                        @slot('formAction')
+                            {{ route('subcategory_update', [$subcategory->id]) }}
+                        @endslot
+
+                        @slot('content')
+                            <img class="file-upload-preview img-fluid" src="/storage/icons/{{$subcategory->icon}}" alt="{{ __('Subcategory icon') }}" />
+                            @error('icon') <p style="color: red;">{{ $message }}</p> @enderror
+                            <label class="file-upload" for="avatar-upload">
+                                <i class="fas color-white fa-upload"></i>
+                                <span>{{ __('Upload file') }}</span>
+                            </label>
+                            <input type="file" id="avatar-upload" name="icon" />
+
+                            <label>{{ __('Title') }}</label>
+                            <input type="text" id="subcategory-rename" name="title" value="{{$subcategory->title}}" autocomplete="off" />
+                            <button class="btn btn-success subcategory-rename-submit">{{ __('Save') }}</button>
+                        @endslot
+                    @endcomponent
+                @endcan
+
+                @can('delete', App\Subcategory::class)
+                    @component('components.toolbar-subitem')
+                        @slot('subitemTitle')
+                            {{ __('Delete') }}
+                        @endslot
+
+                        @slot('formAction')
+                            {{ route('subcategory_delete', [$subcategory->id]) }}
+                        @endslot
+
+                        @slot('content')
+                            <button class="btn btn-hazard" type="submit">
+                                <i class="fas mr-2 fa-exclamation-triangle"></i>
+                                <span>{{ __('Delete') }}</span>
+                            </button>
+                        @endslot
+                    @endcomponent
+                @endcan
+            @endslot
+        @endcomponent
+    @endsection
+@endcan

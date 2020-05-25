@@ -29,6 +29,8 @@ class ThreadsController extends Controller
      */
     public function create(int $id, string $slug)
     {
+        $this->authorize('create', Thread::class);
+
 		if (!logged_in()) {
 			return msg_error('login');
 		} else if (!item_exists(Subcategory::find($id), $slug)) {
@@ -117,8 +119,8 @@ class ThreadsController extends Controller
 			}
 
 			return view('thread.single', [
-				'thread' => Thread::find($id),
-				'posts'  => Post::where('thread_id', $id)->orderBy('created_at')->paginate(settings_get('posts_per_page')),
+				'thread' => $thread,
+				'posts'  => $thread->posts()->orderBy('created_at')->paginate(settings_get('posts_per_page')),
 			]);
 		} else {
 			return view('errors.404', ['value' => urldecode($slug)]);
@@ -131,16 +133,20 @@ class ThreadsController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy(int $id, string $slug)
+    public function destroy(int $id)
     {
-		$this->authorize('delete', Thread::class);
-
 		$thread = Thread::find($id);
+		$this->authorize('delete', $thread);
+
 		$subcategory = $thread->subcategory;
 
-		foreach ($thread->posts as $post) {
-			$post->delete();
-		}
+		$thread->posts->each(function($post) {
+            $post->delete();
+        });
+
+        UserVisitedThreads::where('thread_id', $thread->id)->each(function($visit) {
+            $visit->delete();
+        });
 
 		ActivityLog::create([
 			'user_id' 	   => auth()->user()->id,
@@ -167,7 +173,12 @@ class ThreadsController extends Controller
 				'type'    => 'error',
 				'message' => __('Please log in and try again'),
 			]);
-		} else if (!Thread::find(request('id'))) {
+		} else if (auth()->user()->is_suspended()) {
+            return response()->json([
+                'type'    => 'error',
+                'message' => __('You are suspended'),
+            ]);
+        } else if (!Thread::find(request('id'))) {
 			return response()->json([
 				'type'    => 'error',
 				'message' => __('That thread does not exist, refresh the page and try again'),
@@ -181,7 +192,7 @@ class ThreadsController extends Controller
 			$thread = Thread::find(request('id'));
 
 			if ($thread->locked) {
-				$thread->locked = false;
+				$thread->unlock();
 				$state = __('unlocked');
 
 				ActivityLog::create([
@@ -190,7 +201,7 @@ class ThreadsController extends Controller
 					'performed_on' => json_encode(['table' => 'threads', 'id' => $thread->id]),
 				]);
 			} else {
-				$thread->locked = true;
+				$thread->lock();
 				$state = __('locked');
 
 				ActivityLog::create([
@@ -211,25 +222,28 @@ class ThreadsController extends Controller
     }
 
 	/**
-     * Update the specified resource in storage, using AJAX.
+     * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update_ajax(Request $request)
+    public function update()
     {
 		if (!logged_in()) {
 			return response()->json([
 				'type'    => 'error',
 				'message' => __('Please log in and try again'),
 			]);
-		} else if (!Thread::find(request('id'))) {
+		} else if (auth()->user()->is_suspended()) {
+            return response()->json([
+                'type'    => 'error',
+                'message' => __('You are suspended'),
+            ]);
+        } else if (!Thread::find(request('id'))) {
 			return response()->json([
 				'type'    => 'error',
 				'message' => __('That thread does not exist, refresh the page and try again'),
 			]);
-		} else if (!is_role('superadmin', 'moderator')) {
+		} else if (!is_role('superadmin')) {
 			return response()->json([
 				'type' 	  => 'error',
 				'message' => __('Insufficient permissions')
@@ -260,53 +274,17 @@ class ThreadsController extends Controller
 		}
     }
 
-	/**
-     * Remove the specified resource from storage, using AJAX.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy_ajax(Request $request)
-    {
-		if (!logged_in()) {
-			return response()->json([
-				'type'    => 'error',
-				'message' => __('Please log in and try again'),
-			]);
-		} else if (!Thread::find(request('id'))) {
-			return response()->json([
-				'type'    => 'error',
-				'message' => __('That thread does not exist, refresh the page and try again'),
-			]);
-		} else if (!is_role('superadmin', 'moderator')) {
-			return response()->json([
-				'type'    => 'error',
-				'message' => __('Insufficient permissions'),
-			]);
-		} else {
-			$post = Post::find(request('id'));
-			$thread = $post->thread;
+    public function restore(Request $request, $id) {
+        $thread = Thread::onlyTrashed()->find($id);
 
-			$subcategory = $thread->subcategory;
-			$redirect = route('subcategory_show', [$subcategory->id, $subcategory->slug]);
+        if (empty($thread)) return msg_error(__('That thread does not exist'));
 
-			foreach ($thread->posts as $post) {
-				$post->delete();
-			}
+        $thread->restore();
 
-			ActivityLog::create([
-				'user_id' 	   => auth()->user()->id,
-				'task'	  	   => __('deleted'),
-				'performed_on' => json_encode(['table' => 'threads', 'id' => $thread->id]),
-			]);
+        Post::onlyTrashed()->where('thread_id', $thread->id)->each(function($post) {
+            $post->restore();
+        });
 
-			$thread->delete();
-			
-			return response()->json([
-				'type'     => 'success',
-				'message'  => __('Thread was successfully deleted'),
-				'redirect' => $redirect,
-			]);
-		}
+        return redirect(route('thread_show', [$thread->id, $thread->slug]));
     }
 }

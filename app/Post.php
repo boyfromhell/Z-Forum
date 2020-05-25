@@ -2,10 +2,13 @@
 
 namespace App;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Model;
 
 class Post extends Model
 {
+    use SoftDeletes;
+
 	public function thread()
 	{
 		return $this->belongsTo(Thread::class);
@@ -29,4 +32,8 @@ class Post extends Model
 	public function likes() {
 		return $this->hasMany(UserLikedPosts::class);
 	}
+
+    public function is_deleted() {
+        return $this->deleted_at ?? false;
+    }
 }

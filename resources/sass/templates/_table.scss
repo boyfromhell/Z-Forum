@@ -4,7 +4,6 @@
 	}
 
 	.table-group {
-		border: 2px solid $green;
 		margin-bottom: 1rem;
 
 		.table-header, .table-row {
@@ -22,9 +21,8 @@
 
 		.table-header {
 			padding: 0.5rem 0.25rem;
-			background: $green;
 			position: relative;
-			color: white;
+			background: $gray;
 
 			.table-title {
 				flex: unset !important;
@@ -36,18 +34,21 @@
 
 				h4 {
 					margin-left: -0.5rem;
+                    color: white;
 
 					@include phone {
+                        font-size: 1.25rem;
 						margin-left: 0;
 					}
 				}
 
 				a {
 					font-size: inherit;
-					color: white;
+                    color: inherit;
 
 					&:hover {
 						text-decoration: underline;
+                        color: $turqoise;
 					}
 				}
 			}
@@ -63,17 +64,18 @@
 		}
 
 		.table-row {
-			transition: background 0.1s ease-in-out;
 			background: $darkgray;
-			color: $white;
-			margin: 4px;
+            border-radius: 2px;
+			margin: 0.25rem 0;
+			color: white;
 			opacity: 0;
 
 			&.admin-post {
 				background: linear-gradient(to right, $superadmin, $gray);
+                transition: none !important;
 				
 				&:hover {
-					background: linear-gradient(to right, #ff481040, #57576880);
+					background: $gray-full;
 				}
 			}
 
@@ -129,7 +131,7 @@
 			}
 
 			&:hover {
-				background: #62627580;
+				background: $gray;
 			}
 
 			.folder {
@@ -143,10 +145,8 @@
 		}
 
 		.subcategory-rows {
-			transition: height 0.25s ease-in-out;
-			overflow: hidden;
-
 			&.hidden {
+			    overflow: hidden;
 				height: 0;
 			}
 		}
@@ -157,12 +157,39 @@
 			display: flex;
 			flex: 1;
 
+            @include phone {
+                flex-direction: column;
+            }
+
 			.__wrapper {
 				align-items: center;
 				display: flex;
 
 				&.table-title {
 					flex: 1;
+
+                    p {
+                        display: flex;
+
+                        a {
+                            margin: auto;
+                        }
+
+                        .orange-post {
+                            margin: auto auto auto 0.5rem;
+                            border: 1px solid black;
+                            color: white !important;
+                            background: $superadmin;
+                            padding: 0.25rem 0.5rem;
+                            border-radius: 0.25rem;
+                            white-space: nowrap;
+                            user-select: none;
+
+                            &:hover {
+                                color: $turqoise !important;
+                            }
+                        }
+                    }
 				}
 
 				&.table-views, &.table-posts {
@@ -178,13 +205,23 @@
 					width: 25%;
 
 					@include phone {
-						width: 55%;
+						width: 100%;
 					}
 
 					.latest-post {
 						flex-direction: column;
 						margin-left: auto;
 						display: flex;
+
+                        @include phone {
+                            flex-direction: row;
+                            margin-top: 1rem;
+                            margin-left: 0;
+
+                            .posted-at {
+                                margin-right: 0.25rem;
+                            }
+                        }
 						
 						a {
 							margin-left: auto;

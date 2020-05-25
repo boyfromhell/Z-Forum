@@ -41,54 +41,55 @@ class CategoriesPolicy
      */
     public function create(User $user)
     {
-        return is_role('superadmin');
+        if ($user->is_suspended()) return false;
+        return $user->is_role('superadmin');
     }
 
     /**
      * Determine whether the user can update the category.
      *
      * @param  \App\User  $user
-     * @param  \App\Category  $category
      * @return mixed
      */
-    public function update(User $user, Category $category)
+    public function update(User $user)
     {
-        return is_role('superadmin');
+        if ($user->is_suspended()) return false;
+        return $user->is_role('superadmin');
     }
 
     /**
      * Determine whether the user can delete the category.
      *
      * @param  \App\User  $user
-     * @param  \App\Category  $category
      * @return mixed
      */
-    public function delete(User $user, Category $category)
+    public function delete(User $user)
     {
-        return is_role('superadmin');
+        if ($user->is_suspended()) return false;
+        return $user->is_role('superadmin');
     }
 
     /**
      * Determine whether the user can restore the category.
      *
      * @param  \App\User  $user
-     * @param  \App\Category  $category
      * @return mixed
      */
-    public function restore(User $user, Category $category)
+    public function restore(User $user)
     {
-        return is_role('superadmin');
+        if ($user->is_suspended()) return false;
+        return $user->is_role('superadmin');
     }
 
     /**
      * Determine whether the user can permanently delete the category.
      *
      * @param  \App\User  $user
-     * @param  \App\Category  $category
      * @return mixed
      */
-    public function forceDelete(User $user, Category $category)
+    public function forceDelete(User $user)
     {
-        return is_role('superadmin');
+        if ($user->is_suspended()) return false;
+        return $user->is_role('superadmin');
     }
 }

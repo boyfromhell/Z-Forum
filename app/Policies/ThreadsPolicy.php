@@ -41,7 +41,8 @@ class ThreadsPolicy
      */
     public function create(User $user)
     {
-        return auth()->user();
+        if ($user->is_suspended()) return false;
+        return logged_in();
     }
 
     /**
@@ -53,7 +54,8 @@ class ThreadsPolicy
      */
     public function update(User $user, Thread $thread)
     {
-        return is_role('superadmin', 'moderator');
+        if ($user->is_suspended()) return false;
+        return $user->is_role('superadmin');
     }
 
     /**
@@ -65,11 +67,12 @@ class ThreadsPolicy
      */
     public function delete(User $user, Thread $thread)
     {
-        return is_role('superadmin');
+        if ($user->is_suspended()) return false;
+        return $user->is_role('superadmin');
     }
 
 	/**
-     * Determine whether the user can delete the thread.
+     * Determine whether the user can toggle the thread lock.
      *
      * @param  \App\User  $user
      * @param  \App\Thread  $thread
@@ -77,7 +80,8 @@ class ThreadsPolicy
      */
     public function toggle(User $user, Thread $thread)
     {
-        return is_role('superadmin', 'moderator');
+        if ($user->is_suspended()) return false;
+        return $user->is_role('superadmin', 'moderator');
     }
 
     /**
@@ -89,7 +93,8 @@ class ThreadsPolicy
      */
     public function restore(User $user, Thread $thread)
     {
-        return is_role('superadmin');
+        if ($user->is_suspended()) return false;
+        return $user->is_role('superadmin');
     }
 
     /**
@@ -101,6 +106,7 @@ class ThreadsPolicy
      */
     public function forceDelete(User $user, Thread $thread)
     {
-        return is_role('superadmin');
+        if ($user->is_suspended()) return false;
+        return $user->is_role('superadmin');
     }
 }

@@ -10,6 +10,7 @@
 @import 'bootstrap/custom-bootstrap';
 
 // Components
+@import 'components/chat-message';
 @import 'components/auth-modal';
 @import 'components/components';
 @import 'components/tinymce';
@@ -18,6 +19,7 @@
 
 // Templates
 @import 'templates/message-form';
+@import 'templates/maintenance';
 @import 'templates/admin-login';
 @import 'templates/thread-form';
 @import 'templates/error-page';
@@ -26,6 +28,7 @@
 @import 'templates/messages';
 @import 'templates/message';
 @import 'templates/profile';
+@import 'templates/garbage';
 @import 'templates/toolbar';
 @import 'templates/sidebar';
 @import 'templates/navbar';

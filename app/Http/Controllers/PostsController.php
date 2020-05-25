@@ -96,7 +96,12 @@ class PostsController extends Controller
 				'type'    => 'error',
 				'message' => __('Please log in and try again'),
 			]);
-		} else if (!Post::find(request('id'))) {
+		} else if (auth()->user()->is_suspended()) {
+            return response()->json([
+                'type'    => 'error',
+                'message' => __('You are suspended'),
+            ]);
+        } else if (!Post::find(request('id'))) {
 			return response()->json([
 				'type'    => 'error',
 				'message' => __('That post does not exist, refresh the page and try again'),
@@ -158,7 +163,12 @@ class PostsController extends Controller
 				'type'    => 'error',
 				'message' => __('Please log in and try again'),
 			]);
-		} else if (!Post::find(request('id'))) {
+		} else if (auth()->user()->is_suspended()) {
+            return response()->json([
+                'type'    => 'error',
+                'message' => __('You are suspended'),
+            ]);
+        } else if (!Post::find(request('id'))) {
 			return response()->json([
 				'type'    => 'error',
 				'message' => __('That post does not exist, refresh the page and try again'),
@@ -219,7 +229,12 @@ class PostsController extends Controller
 				'type' 	  => 'error',
 				'message' => __('You must be logged in to do that'),
 			]);
-		}
+		} else if (auth()->user()->is_suspended()) {
+            return response()->json([
+                'type'    => 'error',
+                'message' => __('You are suspended'),
+            ]);
+        }
 
 		$isLiked = UserLikedPosts::where([ 'user_id' => auth()->user()->id, 'post_id' => request('id') ])->get();
 
@@ -246,4 +261,23 @@ class PostsController extends Controller
 			]);
 		}
 	}
+
+    public function restore(Request $request, $id) {
+        $post = Post::onlyTrashed()->find($id);
+
+        if (empty($post)) return msg_error(__('That post does not exist'));
+
+        $post->restore();
+
+        return redirect(route('post_show', [
+            $post->thread->id,
+            $post->thread->slug,
+            get_item_page_number(
+                $post->thread->posts,
+                $post->id,
+                settings_get('posts_per_page')
+            ),
+            $post->id,
+        ]));
+    }
 }

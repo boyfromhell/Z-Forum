@@ -9,42 +9,53 @@
 @endsection
 
 @section('content')
-	<div id="message">
-		<div class="message-title">
-			<h3>{{ $message->title }}</h3>
-		</div>
-
-		<div class="message-users">
-			<span class="message-from">
-				@if ($message->author->id !== auth()->user()->id)
-					{{ __('From') }}
-					<a class="message-from-user {{role_coloring($message->author->role)}}" href="{{route('user_show', [$message->author->id])}}">
-						{{ $message->author->username }}
-					</a>
-				@endif
-
-				<span class="message-from-date">{{ pretty_date($message->created_at) }}</span>
-			</span>
-
-			<span class="message-to">
-				@if ($message->recipient->id !== auth()->user()->id)
-					{{ __('To') }}
-					<a href="{{route('user_show', [$message->recipient->id])}}">{{ $message->recipient->username }}</a>
-				@endif
-			</span>
-		</div>
-
-		<div class="message-content">
-			{{ $message->content }}
-		</div>
-	</div>
-
-	@if ($message->author->id !== auth()->user()->id)
-		<a class="btn mt-2 btn-success-full" href="{{
-			route('message_new') . '?replyTo=' . $message->author->username . '&replySubject=' . urlencode($message->title)
-		}}">
-			<span>{{ __('Reply') }}</span>
-			<i class="fas ml-2 color-white fa-reply"></i>
-		</a>
-	@endif
+	@include('components.message', ['message' => $message, 'replyButton' => true])
 @endsection
+
+@can('delete', $message)
+    @section('toolbarItem')
+        @component('components.toolbar-item', ['cookie' => 'message'])
+            @slot('icon')
+                <i class="fas fa-envelope"></i>
+            @endslot
+
+            @slot('categoryTitle')
+                {{ __('Message') }}
+            @endslot
+
+            @slot('toolbarSubitem')
+                @can('update', $message)
+                    @component('components.toolbar-subitem')
+                        @slot('subitemTitle')
+                            {{ __('Edit message') }}
+                        @endslot
+
+                        @slot('content')
+                            @error('content') <p style="color: red;">{{ $message }}</p> @enderror
+                            <textarea name="content" id="message-edit" rows="5"><?= old('content') ?? $message->content ?></textarea>
+                        @endslot
+                    @endcomponent
+                @endcan
+
+                @can('delete', $message)
+                    @component('components.toolbar-subitem')
+                        @slot('subitemTitle')
+                            {{ __('Delete message') }}
+                        @endslot
+
+                        @slot('formAction')
+                            {{ route('message_delete', [$message->id]) }}
+                        @endslot
+
+                        @slot('content')
+                            <button class="btn btn-hazard" type="submit">
+                                <i class="fas mr-2 fa-exclamation-triangle"></i>
+                                <span>{{ __('Delete') }}</span>
+                            </button>
+                        @endslot
+                    @endcomponent
+                @endcan
+            @endslot
+        @endcomponent
+    @endsection
+@endcan

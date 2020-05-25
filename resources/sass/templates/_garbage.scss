@@ -1,0 +1,63 @@
+#garbage {
+    form {
+        display: inline-block;
+        margin-left: auto;
+
+        .restore-button {
+            margin-bottom: 1rem;
+
+            &:hover {
+                i {
+                    transform: rotate(-360deg);
+                }
+            }
+
+            i {
+                transition: transform 0.5s ease-in-out, color 0.15s ease-in-out;
+                transform: rotate(0);
+            }
+        }
+    }
+
+    .garbage-wrapper {
+        margin-bottom: 1rem;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+
+        .garbage-title {
+            border-bottom: 2px solid $green;
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+    }
+
+    .item {
+        border: 1px solid $darkgray;
+        margin-bottom: 0.5rem;
+        background: $darkgray;
+        padding: 0.5rem;
+        display: flex;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    .chat-messages {
+        .chat-message {
+            border: 1px solid $darkgray;
+            margin-bottom: 0.5rem;
+            background: $darkgray;
+        }
+    }
+
+    .posts {
+        .post {
+            &:last-child {
+                margin-bottom: 0;
+            }
+        }
+    }
+}

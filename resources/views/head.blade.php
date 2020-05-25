@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html @isset($_COOKIE['custom-scrollbar']) class="custom-scrollbar" @endisset lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -54,7 +54,10 @@
 	{{-- Maintenance mode check --}}
 	@if (App\MaintenanceMode::find(1)->enabled)
 		@cannot('update', App\MaintenanceMode::find(1))
-			@include('errors.maintenance')
+			<div id="maintenance">
+                <h1>{{ __('We are in maintenance') }}</h1>
+                <h2>{{ __('Surf back at a later date!') }}</h2>
+            </div>
 			@php return @endphp
 		@endcannot
 	@endif
@@ -79,7 +82,7 @@
 		</div>
 
 		{{-- Admin toolbar --}}
-		{{-- @include('layouts.toolbar') --}}
+		@include('layouts.toolbar')
 
 		{{-- Main wrapper --}}
         <main class="container-fluid" id="content">
@@ -87,9 +90,6 @@
 			<div id="main">
 				{{-- Breadcrumbs --}}
 				@yield('breadcrumbs')
-
-				{{-- CRUD toolbar --}}
-				{{-- @yield('crudToolbar') --}}
 
 				{{-- Thread title --}}
 				@yield('threadTitle')

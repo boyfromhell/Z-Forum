@@ -5,7 +5,5 @@
 @endsection
 
 @section('content')
-	@component('components.profile', ['user' => $user, 'posts_with_likes' => $posts_with_likes, 'active' => ''])
-		
-	@endcomponent
+	@include('components.profile', ['user' => $user, 'posts_with_likes' => $posts_with_likes, 'active' => ''])
 @endsection

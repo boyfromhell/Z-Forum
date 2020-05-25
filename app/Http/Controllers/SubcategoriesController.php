@@ -35,7 +35,6 @@ class SubcategoriesController extends Controller
 			'icon'  => 'image',
 		]);
 
-
 		$subcategory = new Subcategory();
 		$subcategory->title = request('title');
 		$subcategory->slug = urlencode(request('title'));
@@ -43,7 +42,7 @@ class SubcategoriesController extends Controller
 			$path = $request->file('icon')->store('/public/icons');
 			$subcategory->icon = explode('icons/', $path)[1];
 		}
-		$subcategory->category_id = Category::find($id)->id;
+		$subcategory->category_id = Subcategory::find($id)->id;
 		$subcategory->save();
 
 		ActivityLog::create([
@@ -74,51 +73,35 @@ class SubcategoriesController extends Controller
 			return view('errors.404', ['value' => urldecode($slug)]);
 		}
     }
-	
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit(int $id, string $slug)
-    {
-		$this->authorize('update', Subcategory::class);
-
-		if (item_exists(Subcategory::find($id), $slug)) return view('subcategory.edit', ['subcategory' => Subcategory::find($id)]);
-    }
 
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, int $id, string $slug)
+    public function update(Request $request, $id)
     {
-		$this->authorize('update', Subcategory::class);
+        if (empty($subcategory = Subcategory::find($id))) return msg_error(__('That subcategory does not exist'));
 
-		if (item_exists(Subcategory::find($id), $slug)) {
-			$data = request()->validate([
-				'title' => 'required|max:40',
-			]);
+        $this->authorize('update', Subcategory::class);
 
-			$subcategory = Subcategory::find($id);
-			$subcategory->title = request('title');
-			$subcategory->slug = urlencode(request('title'));
-			$subcategory->save();
+        request()->validate([
+            'title' => 'required|min:3|max:40',
+            'icon'	=> 'max:5120|file|image|nullable',
+        ]);
 
-			ActivityLog::create([
-				'user_id' 	   => auth()->user()->id,
-				'task'	  	   => __('edited'),
-				'performed_on' => json_encode(['table' => 'subcategories', 'id' => $subcategory->id]),
-			]);
-
-			return redirect(route('subcategory_show', [$subcategory->id, $subcategory->slug]));
-		} else {
-			return view('errors.404');
+        if (isset($request->icon)) {
+			$path = $request->file('icon')->store('/public/icons');
+			$path = explode('public/', $path)[1];
 		}
+
+        $subcategory->update([
+            'title' => request('title'),
+            'slug'  => urlencode(request('title')),
+            'icon'  => $path ?? $subcategory->icon,
+        ]);
+
+        return redirect(route('subcategory_show', [$subcategory->id, $subcategory->slug]));
     }
 
     /**
@@ -127,34 +110,55 @@ class SubcategoriesController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy(int $id, string $slug)
+    public function destroy(int $id)
     {
+		$subcategory = Subcategory::find($id);
 		$this->authorize('delete', Subcategory::class);
 
-		if (item_exists(Subcategory::find($id), $slug)) {
-			$subcategory = Subcategory::find($id);
-			$category = $subcategory->category;
+        $subcategory->threads->each(function($thread) {
+            $thread->posts->each(function($post) {
+                $post->likes()->onlyTrashed()->each(function($like) {
+                    $like->delete();
+                });
 
-			if ($subcategory->threads) {
-				foreach ($subcategory->threads as $thread) {
-					foreach ($thread->posts as $post) {
-						$post->delete();
-					}
-					$thread->delete();
-				}
-			}
+                $post->delete();
+            });
 
-			ActivityLog::create([
-				'user_id' 	   => auth()->user()->id,
-				'task'	  	   => __('deleted'),
-				'performed_on' => json_encode(['table' => 'subcategories', 'id' => $subcategory->id]),
-			]);
+            $thread->visits()->onlyTrashed()->each(function($visit) {
+                $visit->delete();
+            });
 
-			$subcategory->delete();
-			
-			return redirect(route('category_show', [$category->id, $category->slug]));
-		} else {
-			return view('errors.404', ['value' => urldecode($slug)]);
-		}
+            $thread->delete();
+        });
+
+        $subcategory->delete();
+		
+		return redirect(route('index'));
+    }
+
+    public function restore(Request $request, $id) {
+        if (empty($subcategory = Subcategory::onlyTrashed()->find($id))) return msg_error(__('That subcategory does not exist'));
+
+        $this->authorize('restore', Subcategory::class);
+        
+        $subcategory->restore();
+
+        $subcategory->threads()->onlyTrashed()->each(function($thread) {
+            $thread->restore();
+
+            $thread->posts()->onlyTrashed()->each(function($post) {
+                $post->restore();
+
+                $post->likes()->onlyTrashed()->each(function($like) {
+                    $like->restore();
+                });
+            });
+
+            $thread->visits()->onlyTrashed()->each(function($visit) {
+                $visit->restore();
+            });
+        });
+
+        return redirect(route('subcategory_show', [$subcategory->id, $subcategory->slug]));
     }
 }

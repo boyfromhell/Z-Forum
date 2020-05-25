@@ -4,11 +4,12 @@ namespace App;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    use Notifiable;
+    use Notifiable, SoftDeletes;
 
 	/**
      * The default attributes.
@@ -29,7 +30,16 @@ class User extends Authenticatable
      */
     protected $guarded = [
 		'password',
-        'role',
+    ];
+
+    /**
+     * The attributes that should be Carbon objects.
+     */
+    protected $dates = [
+        'created_at',
+        'updated_at',
+        'suspended',
+        'last_seen',
     ];
 
     /**
@@ -80,4 +90,39 @@ class User extends Authenticatable
 	public function messages_received() {
 		return $this->hasMany(UserMessage::class, 'recipient_id', 'id');
 	}
+
+    public function chat_messages() {
+        return $this->hasMany(ChatMessage::class);
+    }
+
+    public function is_role(string ...$roles) : bool {
+        foreach ($roles as $role) {
+            if (strtolower($this->role) === strtolower($role)) return true;
+        }
+        return false;
+	}
+
+    public function suspend($date, $reason) {
+        $this->update([
+            'suspended' => $date,
+            'suspended_reason' => $reason,
+        ]);
+        return $this;
+    }
+
+    public function pardon() {
+        $this->update([
+            'suspended' => null,
+            'suspended_reason' => null,
+        ]);
+        return $this;
+    }
+
+    public function is_online() {
+        return \Illuminate\Support\Facades\Cache::has('user-online-' . $this->id) ? true : false;
+    }
+
+    public function is_suspended() {
+        return $this->suspended !== null && !$this->suspended->isPast();
+    }
 }

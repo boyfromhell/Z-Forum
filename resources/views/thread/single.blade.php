@@ -9,30 +9,6 @@
 	{{ Breadcrumbs::render('thread', $thread) }}
 @endsection
 
-@can('update', $thread)
-	@section('crudToolbar')
-		<div class="crud-toolbar">
-			<button class="btn btn-default thread-edit">
-				<i class="fas fa-pen"></i>
-			</button>
-			@if ($thread->locked)
-				<button class="btn btn-default spin thread-toggle" type="button">
-					<i class="fas fa-unlock"></i>
-				</button>
-			@else
-				<button class="btn btn-default spin thread-toggle" type="button">
-					<i class="fas fa-lock"></i>
-				</button>
-			@endif
-			@can('delete', $thread)
-				<button class="btn btn-hazard spin thread-delete" type="submit">
-					<i class="fas fa-trash-alt"></i>
-				</button>
-			@endcan
-		</div>
-	@endsection
-@endcan
-
 @section('threadTitle')
 	<div class="thread-header">
 		<h4 class="thread-title">{{ $thread->title }}</h4>
@@ -61,7 +37,7 @@
 @endsection
 
 @section('content')
-	<div class="thread @if ($thread->locked) locked @endif">
+	<div class="thread @if($thread->locked) locked @endif">
 		@auth
 			@can('create', [App\Post::class, $thread])
 				<button class="reply-button btn btn-success-full" type="button">
@@ -148,13 +124,9 @@
 
 				$('.reply-button').click(function() {
 					// Spawn dummy textarea for TinyMCE if it doesn't already exist, then spawn the editor
-					if ($('#reply-form').hasClass('d-none')) {
-						$('#reply-form').removeClass('d-none');
-					}
+					if ($('#reply-form').hasClass('d-none')) $('#reply-form').removeClass('d-none');
 
-					if (!$(this).hasClass('d-none')) {
-						$(this).addClass('d-none');
-					}
+					if (!$(this).hasClass('d-none')) $(this).addClass('d-none');
 					
 					tinymce.init({
 						selector: '#thread-reply',
@@ -197,9 +169,7 @@
 					iframes.each(function() {
 						let iframe = $(this)[0].contentWindow.document;
 						$(iframe).find('body').css('line-height', '1.5').prepend(`
-							<p style="margin: 0;">
-								Posted by ${author} - <a href="${link}">Read post</a>
-							</p>
+							<p>Posted by ${author} - <a href="${link}">Read post</a></p>
 							
 							[quote]${content}[/quote]
 						`);
@@ -213,168 +183,161 @@
 		@endcan
 
 		@include('js.post.controls')
-
-		@can('update', $thread)
-			<script>
-				// Init the handlers
-				thread_handlers();
-
-				// Toggle thread lock/unlock state
-				$('.thread-toggle').click(function(e) {
-					e.preventDefault();
-					$.ajax({
-						url: '{{ route("thread_toggle") }}',
-						method: 'POST',
-						data: {
-							_token: '{{ Session::token() }}',
-							id: '{{ $thread->id }}',
-						},
-						success: function(response) {
-							$('.thread-toggle').removeClass('loading');
-							ajax_alert(response);
-
-							// Need to delay this due to .spin event handler code being fired after this 
-							setTimeout(() => {
-								$('.thread-toggle').removeAttr('disabled');
-							}, 100);
-
-							if (response.state === 'unlocked') {
-								$('.thread-toggle i').removeClass('fa-lock').addClass('fa-lock color-white')
-							} else {
-								$('.thread-toggle i').removeClass('fa-lock').addClass('fa-unlock color-white');
-							}
-						},
-						error: function(error) {
-							console.log(error);
-						}
-					});
-				});
-
-				// Edit thread title
-				function thread_edit() {
-					if (!$('.thread-save-toolbar').length) {
-						let title = $('.thread-title').html();
-
-						$('.thread-title').replaceWith(`
-							<fieldset style="width: ${$('#main').width()}px;">
-								<legend>
-									Title
-								</legend>
-								<input type="text" value="${title}" />
-							</fieldset>
-						`);
-						$('.thread-header').append(`
-							<div class="thread-save-toolbar">
-								<button class="btn btn-success-full spin thread-save">
-									<span>Save</span>
-								</button>
-								<button class="btn btn-default thread-cancel">
-									<span>Cancel</span>
-								</button>
-							</div>
-						`);
-					}
-				}
-
-				// Cancel the edited thread and reset elements to how they were before
-				function thread_cancel(original) {					
-					// Reset thread header and edit button
-					$('.thread-header').html(original);
-					$('.thread-edit').removeAttr('disabled');
-
-					// The event handler needs to be re-initalized since the element was destroyed
-					thread_handlers();
-				}
-
-				// Save the edited post and reset elements to how they were before, but with the updated post content
-				function thread_save(original, e) {
-					e.preventDefault();
-					$.ajax({
-						url: '{{ route("thread_update_ajax") }}',
-						method: 'POST',
-						data: {
-							_token: '{{ Session::token() }}',
-							id: '{{ $thread->id }}',
-							title: $('.thread-header input').val()
-						},
-						success: function(response) {
-							// Reset post element and remove TinyMCE editor first
-							$('.thread-header').html(original);
-
-							// Insert the newly edited content into the post
-							$('.thread-title').html(response.title);
-
-							$('.thread-edit').removeAttr('disabled');
-
-							// Edit the active breadcrumb content
-							$('.breadcrumb-item.active').html(response.title);
-
-							// Edit the current URL state for better UX in case user reloads, otherwise it will go to the old item URL
-							window.history.pushState("", "", response.url);
-
-							// Dispay the alert message on the top of the page
-							if (response.type !== 'none') {
-								ajax_alert(response);
-							}
-
-							// The event handlers need to be reinitalized since the element was destroyed
-							thread_handlers();
-						},
-						error: function(error) {
-							console.log(error);
-						}
-					});
-				}
-
-				// Initialize post handlers in order to let them be "recursive"
-				function thread_handlers() {
-					let original = $('.thread-header').html();
-
-					$('.thread-edit').click(function() {
-						thread_edit();
-
-						$('.thread-save').click(function(e) {
-							thread_save(original, e);
-						});
-
-						$('.thread-cancel').click(function() {
-							thread_cancel(original);
-						});
-
-						// Put disabled on edit button
-						$(this).attr('disabled', true);
-					});
-
-					$('.thread-delete').click(function(e) {
-						thread_delete(e);
-					});
-				}
-			</script>
-		@elsecan ('delete', $thread)
-			<script>
-				// Delete thread
-				function thread_delete(e) {
-					e.preventDefault();
-					$.ajax({
-						url: '{{ route("thread_delete_ajax") }}',
-						method: 'POST',
-						data: {
-							_token: '{{ Session::token() }}',
-							id: '{{ $thread->id }}',
-						},
-						success: function(response) {
-							window.location.href = response.redirect;
-						},
-						error: function(error) {
-							console.log(error);
-						}
-					});
-				}
-			</script>
-		@endcan
 	@endauth
 
 	@if (settings_get('posts_per_page') >= 5)
 		{{ $posts->links('layouts.pagination') }}
 	@endif
 @endsection
+
+@can('toggle', $thread)
+    @section('toolbarItem')
+        @component('components.toolbar-item', ['cookie' => 'thread'])
+            @slot('icon')
+                <i class="fas fa-comment-alt"></i>
+            @endslot
+
+            @slot('categoryTitle')
+                {{ __('Thread') }}
+            @endslot
+
+            @slot('toolbarSubitem')
+                @can('update', $thread)
+                    @component('components.toolbar-subitem')
+                        @slot('subitemTitle')
+                            {{ __('Title') }}
+                        @endslot
+
+                        @slot('content')
+                            <input type="text" id="thread-rename" value="{{$thread->title}}">
+                            <button class="btn btn-success thread-rename-submit" disabled>{{ __('Save') }}</button>
+                        @endslot
+                    @endcomponent
+                @endcan
+
+                @component('components.toolbar-subitem')
+                    @slot('subitemTitle')
+                        {{ __('Lock or unlock thread') }}
+                    @endslot
+
+                    @slot('content')
+                        @if ($thread->locked)
+                            <button class="btn btn-success thread-toggle" type="button">
+                                <i class="fas mr-2 fa-lock-open"></i>
+                                <span>{{ __('Unlock') }}</span>
+                            </button>
+                        @else
+                            <button class="btn btn-hazard thread-toggle" type="button">
+                                <i class="fas mr-2 fa-lock"></i>
+                                <span>{{ __('Lock') }}</span>
+                            </button>
+                        @endif
+                    @endslot
+                @endcomponent
+
+                @can('delete', $thread)
+                    @component('components.toolbar-subitem')
+                        @slot('subitemTitle')
+                            {{ __('Delete') }}
+                        @endslot
+
+                        @slot('formAction')
+                            {{ route('thread_delete', [$thread->id, $thread->slug]) }}
+                        @endslot
+
+                        @slot('content')
+                            <button class="btn btn-hazard" type="submit">
+                                <i class="fas mr-2 fa-exclamation-triangle"></i>
+                                <span>{{ __('Delete') }}</span>
+                            </button>
+                        @endslot
+                    @endcomponent
+                @endcan
+            @endslot
+        @endcomponent
+
+        <script>
+            $('.thread-toggle').click(function(e) {
+                e.preventDefault();
+                $.ajax({
+                    url: '{{ route("thread_toggle") }}',
+                    method: 'POST',
+                    data: {
+                        _token: '{{ Session::token() }}',
+                        id: '{{ $thread->id }}',
+                    },
+                    success: function(response) {
+                        $('.thread-toggle').removeClass('loading');
+                        ajax_alert(response);
+
+                        // Need to delay this due to .spin event handler code being fired after this 
+                        setTimeout(() => {
+                            $('.thread-toggle').removeAttr('disabled');
+                        }, 100);
+
+                        let button = $('.thread-toggle');
+
+                        if (response.state === 'unlocked') {
+                            button.find('i').removeClass('fa-unlock-alt').addClass('fa-lock');
+                            button.removeClass('btn-success').addClass('btn-hazard');
+                            button.find('span').html('Lock');
+                        } else {
+                            button.find('i').removeClass('fa-lock').addClass('fa-unlock-alt');
+                            button.removeClass('btn-hazard').addClass('btn-success');
+                            button.find('span').html('Unlock');
+                        }
+                    },
+                    error: function(error) {
+                        console.log(error);
+                    }
+                });
+            });
+        </script>
+
+        @can('update', $thread)
+            <script>
+                let originalTitle = '{{ $thread->title }}';
+                $('.thread-rename-submit').click(function(e) {
+                    e.preventDefault();
+                    $.ajax({
+                        url: '{{ route("thread_update") }}',
+                        method: 'POST',
+                        data: {
+                            _token: '{{ Session::token() }}',
+                            id: '{{ $thread->id }}',
+                            title: $('#thread-rename').val(),
+                        },
+                        success: function(response) {
+                            // Insert the newly edited content into the post
+                            $('.thread-title').html(response.title);
+
+                            // Edit the active breadcrumb content
+                            $('.breadcrumb-item.active').html(response.title);
+
+                            // Edit the current URL state for better UX in case user reloads, otherwise it will go to the old item URL
+                            window.history.pushState('', '', response.url);
+
+                            // Dispay the alert message on the top of the page
+                            if (response.type != null && response.type !== 'none') ajax_alert(response);
+
+                            $('.thread-rename-submit').attr('disabled', true);
+
+                            originalTitle = response.title;
+                        },
+                        error: function(error) {
+                            console.log(error);
+                        }
+                    });
+                });
+
+                $('#thread-rename').on('input change', function() {
+                    if ($(this).val() !== '' && $(this).val() !== originalTitle) {
+                        $('.thread-rename-submit').removeAttr('disabled');
+                    } else {
+                        $('.thread-rename-submit').attr('disabled', true);
+                    }
+                });
+            </script>
+        @endcan
+    @endsection
+@endcan

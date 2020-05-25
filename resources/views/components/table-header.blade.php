@@ -6,19 +6,19 @@
 			</div>
 		@endisset
 
-		<div class="table-views __wrapper">
-			<i class="far fa-eye" data-title="{{ __('Views') }}"></i>
+		<div class="table-views __wrapper" title="{{ __('Views') }}">
+			<i class="far fa-eye"></i>
 		</div>
 
-		<div class="table-posts __wrapper">
-			<i class="far fa-comments" data-title="{{ __('Posts') }}"></i>
+		<div class="table-posts __wrapper" title="{{ __('Posts') }}">
+			<i class="far fa-comments"></i>
 		</div>
 
 		<div class="table-latest-post __wrapper"></div>
 	</div>
 
 	@isset($collapsible)
-		<button class="category-collapse" type="button">
+		<button class="category-collapse" type="button" title="{{ __('Toggle') }}">
 			<i class="fas fa-angle-double-down"></i>
 		</button>
 	@endisset

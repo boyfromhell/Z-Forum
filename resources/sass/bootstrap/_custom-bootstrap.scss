@@ -31,10 +31,18 @@ html {
 				color: white;
 
 				&:not([disabled]) {
-					&:focus, &:hover, &:active {
+                    * {
+                        transition: color 0.15s ease-in-out;
+                    }
+
+					&:hover, &:active {
 						border-color: $green;
 						background: $green;
 						color: white;
+
+                        * {
+                            color: white;
+                        }
 					}
 				}
 			}
@@ -45,10 +53,18 @@ html {
 				color: white;
 
 				&:not([disabled]) {
-					&:focus, &:hover, &:active {
+                    * {
+                        transition: color 0.15s ease-in-out;
+                    }
+
+					&:hover, &:active {
 						border-color: $green;
 						background: $green;
 						color: white;
+
+                        * {
+                            color: white;
+                        }
 					}
 				}
 			}
@@ -64,8 +80,10 @@ html {
 	}
 }
 
-.modal .btn {
-	width: 100% !important;
+.modal {
+    .btn {
+        width: 100% !important;
+    }
 }
 
 .form-control {
@@ -82,7 +100,7 @@ html {
 	border-color: $darkgray;
 	background: $darkgray;
 
-	&:focus, &:hover {
+	&:hover {
 		background: $gray;
 	}
 }

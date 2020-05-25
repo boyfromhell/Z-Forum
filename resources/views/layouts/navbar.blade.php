@@ -34,11 +34,11 @@
 								</a>
 
 								<ul class="navbar-dropdown">
-									<li class="navbar-dropdown-item">
-										<a class="navbar-dropdown-link" href="{{route('message_new')}}">
-											<span>{{ __('New') }}</span>
-										</a>
-									</li>
+                                    <li class="navbar-dropdown-item">
+                                        <a class="navbar-dropdown-link" href="{{route('message_new')}}">
+                                            <span>{{ __('New') }}</span>
+                                        </a>
+                                    </li>
 								</ul>
 							</li>
 						@else
@@ -65,15 +65,6 @@
 					</button>
 				</div>
 			</form>
-
-			<button class="navbar-toggler" type="button">
-				<div class="toggle-animator">
-					<span></span>
-					<span></span>
-					<span></span>
-					<span></span>
-				</div>
-			</button>
 
 			<div class="navbar-mobile">
 				<ul class="navbar-mobile-items">
@@ -111,10 +102,24 @@
 					@endauth
 				</ul>
 			</div>
-		</div>
+            
+            @isset($_COOKIE['sidebarHidden'])
+                @php $class = 'btn-default' @endphp
+            @else
+                @php $class = 'btn-success' @endphp
+            @endisset
+            <button class="btn toggle-sidebar {{$class}}" type="button">
+                {{ __('Sidebar') }}
+            </button>
 
-		<button class="btn toggle-sidebar btn-success-full" type="button">
-			{{ __('Toggle Sidebar') }}
-		</button>
+            <button class="navbar-toggler" type="button">
+				<div class="toggle-animator">
+					<span></span>
+					<span></span>
+					<span></span>
+					<span></span>
+				</div>
+			</button>
+		</div>
 	</nav>
 @endempty

@@ -20,6 +20,10 @@
 			background: linear-gradient(to right, $moderator, $gray);
 		}
 
+        &.is_suspended {
+			background: linear-gradient(to right, rgba(127, 0, 0, 0.5), $gray);
+		}
+
 		span {
 			text-transform: uppercase;
 			margin-right: 0.25rem;
@@ -141,20 +145,10 @@
 					margin: auto 0;
 				}
 
-				.post-meta-left {
-					.post-author-rank {
-						font-size: 0.8rem;
-					}
-				}
-
 				.post-meta-right {
 					flex-direction: column;
 					text-align: right;
 					display: flex;
-
-					.post-i {
-						font-size: 0.8rem;
-					}
 				}
 			}
 
@@ -162,6 +156,8 @@
 				display: flex;
 
 				.permalink {
+                    position: relative;
+
 					@include phone {
 						display: none;
 					}
@@ -184,6 +180,7 @@
 
 	.post-body {
 		background: $gray;
+        overflow: hidden;
 		color: white;
 		padding: 1rem;
 
@@ -208,6 +205,7 @@
 		}
 
 		* {
+            word-break: break-word;
 			color: white;
 		}
 	}
@@ -302,6 +300,10 @@
 		pointer-events: none;
 		color: white;
 	}
+
+    .restore-button i {
+        color: unset;
+    }
 }
 
 .post-toolbar, .post-save-toolbar {

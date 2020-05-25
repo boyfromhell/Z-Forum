@@ -30,10 +30,27 @@ img, input::placeholder {
 	user-select: none;
 }
 
+select {
+    border: 1px solid $darkgray;
+    background: $darkgray;
+    outline-color: $green;
+    padding: 0.25rem;
+    color: $green;
+
+    option {
+        background: black;
+        color: white;
+    }
+}
+
 input, textarea {
 	transition: box-shadow 0.15s linear;
+    border: 1px solid $darkgray;
 	padding: 0.25rem 0.5rem;
 	outline-color: $green;
+    background: $darkgray;
+    color: white;
+    width: 100%;
 }
 
 a {
@@ -101,6 +118,7 @@ a {
 	}
 
 	#main {
+        margin-right: auto;
 		position: relative;
 		padding-top: 1rem;
 		max-width: 50vw;

@@ -40,7 +40,7 @@ class UsersPolicy
      */
     public function create(User $user)
     {
-        //
+        return $user->is_role('superadmin');
     }
 
     /**
@@ -52,7 +52,27 @@ class UsersPolicy
      */
     public function update(User $user, User $model)
     {
-        //
+        if ($user->is_suspended()) return false;
+        return $user->is_role('superadmin');
+    }
+
+    /**
+     * Determine whether the user can suspsned the user.
+     *
+     * @param  \App\User  $user
+     * @param  \App\User  $model
+     * @return mixed
+     */
+    public function suspend(User $user, User $model)
+    {
+        if ($user->is_suspended()) {
+            return false;
+        } else if ($model->id === auth()->user()->id) {
+            return false;
+        } else if ($user->is_role('superadmin') && !is_role('superadmin')) {
+            return false;
+        }
+        return $user->is_role('superadmin', 'moderator');
     }
 
     /**
@@ -64,7 +84,8 @@ class UsersPolicy
      */
     public function delete(User $user, User $model)
     {
-        return is_role('superadmin');
+        if ($user->is_suspended()) return false;
+        return $user->is_role('superadmin');
     }
 
     /**

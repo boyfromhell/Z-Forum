@@ -12,7 +12,6 @@ No event handler, always runs
 -----------------------------------------------
 */
 Functions.fadeTable();
-Functions.showTitle();
 
 /*
 -----------------------------------------------
@@ -45,9 +44,8 @@ Mouse enter
 */
 Functions.fileUploadAnimation();
 
-// Set up sidebar height on page load
-let sidebarHeight = $('#sidebar').outerHeight(true);
-if ($('#sidebar').hasClass('open')) $('#sidebar').css('height', `${sidebarHeight}px`);
+// Scroll to bottom of chat on every page load
+$('.chat-box').scrollTop(9999);
 
 // Mobile navbar toggler animation
 $('.navbar-toggler').click(function () {
@@ -77,6 +75,34 @@ $(document).click(function(e) {
     }
 });
 
+// Toolbar item collapser
+$('.toolbar-icon').click(function() {
+    let item = $(this).siblings('.toolbar-item');
+    $('.toolbar-item').not(item).removeClass('show');
+    item.toggleClass('show');
+
+    let icon = $(this);
+    $('.toolbar-icon').not(icon).removeClass('active');
+    icon.toggleClass('active');
+});
+
+// Toolbar toggler
+$('.toolbar-toggle').click(function() {
+    $('.toolbar-toggle i').toggleClass('color-white');
+    $('.toolbar-items').toggleClass('hidden');
+    cookieCutter.get('toolbarOpen') ? cookieCutter.delete('toolbarOpen') : cookieCutter.set('toolbarOpen', true, false);
+});
+
+// Set cookie to keep track of which toolbar item to keep open
+$('.toolbar-icon').click(function() {
+    const value = $(this).find('.toolbar-category').attr('data-cookie');
+    if (cookieCutter.get('toolbarItemOpen') === value) {
+        cookieCutter.delete('toolbarItemOpen');
+    } else {
+        cookieCutter.set('toolbarItemOpen', value, false);
+    }
+});
+
 // Reset mobile navbar search input
 $('.mobile-search-remove').click(function() {
     $(this).siblings('#mobile-search').val('').focus();
@@ -85,22 +111,13 @@ $('.mobile-search-remove').click(function() {
 
 // Toggle sidebar
 $('.toggle-sidebar').click(function() {
-	$('#sidebar').removeClass('no-transition');
-
-	let height = 0;
-
-	$('.sidebar-item').each(function() {
-		height += $(this).outerHeight(true);
-	});
-
+    $(this).toggleClass('btn-default btn-success');
 	if ($('#sidebar').hasClass('hide')) {
 		$('#sidebar').removeClass('hide').addClass('open');
-		cookieCutter.setCookie('sidebarOpen', true, false);
-		$('#sidebar').css('height', `${height}px`);
+		cookieCutter.delete('sidebarHidden');
 	} else {
 		$('#sidebar').removeClass('open').addClass('hide');
-		cookieCutter.removeCookie('sidebarOpen');
-		$('#sidebar').removeAttr('style');
+		cookieCutter.set('sidebarHidden', true, false);
 	}
 });
 
@@ -113,6 +130,23 @@ $('.password-revealer').click(function() {
 		$(this).siblings('input').attr('type', 'password');
 		$(this).children('i').attr('class', 'far fa-eye');
 	}
+});
+
+// Suspend month picker handler
+$('#suspend-month').change(function() {
+    const selectedDay = $('#suspend-day')[0].selectedIndex;
+    const selectedIndex = $(this)[0].selectedIndex;
+    if (selectedIndex) {
+        const year = new Date().getFullYear();
+        const months = [null, 31, new Date(year, 1, 29).getDate() === 29 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+        let html = '<option></option>';
+        for (let i = 1; i < months[selectedIndex] + 1; i++) {
+            html += `<option value="${i}">${i}</option>`;
+        }
+        $('#suspend-day').html(html);
+        $('#suspend-day')[0].selectedIndex = selectedDay;
+    }
 });
 
 // Error visuals when password_repeat doesn't match password
@@ -142,6 +176,7 @@ $('.modal-auth input').on('input', function() {
 	}
 });
 
+// Modal error events handling
 $('.modal').on('shown.bs.modal', function() {
 	if ($('.modal .is-invalid').length) {
 		$(this).find('.is-invalid').first().focus();
@@ -154,6 +189,7 @@ if ($('.modal .is-invalid').length) {
 } else if ($('.modal .success').length) {
 	$('.modal .success').parents('.modal').modal('show');
 }
+if ($('#errorModal').attr('data-error')) $('#errorModal').modal('show');
 
 // Put spinning wheel on submits buttons when pressed
 if ($('.spin').length) {
@@ -186,8 +222,10 @@ $('#scroller').click(function() {
 $('.permalink').click(function(e) {
 	e.preventDefault();
 
+    $('.copied-notification').remove();
+
 	// Need some sort of text to copy
-	$(this).append(`<textarea id="copy">${$(this).attr('href')}</textarea>`).attr('id', 'tooltip');
+	$(this).append(`<textarea id="copy">${$(this).attr('href')}</textarea>`);
 
 	// Copy the text and remove the dummy element
 	$('#copy').select();
@@ -195,14 +233,12 @@ $('.permalink').click(function(e) {
 	$('#copy').remove();
 
 	// Change the tooltip content
-	$(this).find('.hover-tooltip').html('Copied!');
+	$(this).append('<span class="copied-notification">Copied</span>');
 
-	// Reset text when hovering outside
-	$(this).mouseout(function() {
-		setTimeout(() => {
-			$(this).find('.hover-tooltip').html($(this).attr('data-title'));
-		}, 150);
-	})
+    // Remove the tooltip after the animation is done
+    setTimeout(() => {
+        $(this).find('.copied-notification').remove();
+    }, 2000);
 });
 
 // Spawn pagination input box
